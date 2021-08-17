@@ -8,6 +8,9 @@ import time
 from ftplib import FTP
 from pathlib import Path
 import json
+from array import *
+
+#import ftpUploadProgress
 
 class FtpUploadTracker:
     sizeWritten = 0
@@ -46,6 +49,7 @@ def serial_ports():
 
 class mainGUI:
     def __init__(self):
+        self.stage0 = 0
         window = tk.Tk()
         window.title("UART rw")
         self.uartState = False # is uart open or not
@@ -106,6 +110,7 @@ class mainGUI:
         comboStopbits["state"] = "readonly"
         labelStopbits.grid(row = 2, column = 3, padx = 5, pady = 3)
         comboStopbits.grid(row = 2, column = 4, padx = 5, pady = 3)
+        labelStopbits = tk.Label(frame_COMinf,text="Stopbits: ")
         
         self.buttonSS = tk.Button(frame_COMinf, text = "Start", command = self.processButtonSS)
         self.buttonSS.grid(row = 3, column = 4, padx = 5, pady = 3, sticky = tk.E)
@@ -115,9 +120,61 @@ class mainGUI:
         # serial read threading
         self.ReadUARTThread = threading.Thread(target=self.ReadUART)
         self.ReadUARTThread.start()
+#stage 0 старт камеры, заход изменение убут для старта консоли линукс
+#stage 1 заход в линукс, добавление ftp
+#stage 2 старт камеры, заход в убут, возвращаем обычный старт камеры
+#stage 3 дожидаемся старта камеры, удаляем файл веба, копируем новый
+#stage 4 старт камеры, заход изменение убут для старта консоли линукс
+#stage 5 заход в линукс, удаление ftp из загрузки
+#stage 6 старт камеры, заход в убут, возвращаем обычный старт камеры 
+
+        stage_frame = tk.Frame(window)
+        stage_frame.grid(row = 4, column = 1)
+        stageSelect = tk.Frame(stage_frame)
+        stageSelect.grid(row = 1, column = 1)
+
+        self.stage0 = tk.BooleanVar()
+        self.stage0.set(1)
+        self.check0 = tk.Checkbutton(stage_frame, text='stage 0 старт камеры, заход изменение убут для старта консоли линукс"',variable=self.stage0, onvalue=1, offvalue=0)#, command=print_selection)
+        self.check0.grid(row = 1, column = 1, padx = 10, pady = 1, sticky = tk.W)
+
+        self.stage1 = tk.BooleanVar()
+        self.stage1.set(1)
+        self.check1 = tk.Checkbutton(stage_frame, text='stage 1 заход в линукс, добавление ftp',variable=self.stage1, onvalue=1, offvalue=0)#, command=print_selection)
+        self.check1.grid(row = 2, column = 1, padx = 10, pady = 1, sticky = tk.W)
+
+        self.stage2 = tk.BooleanVar()
+        self.stage2.set(1)
+        self.check2 = tk.Checkbutton(stage_frame, text='stage 2 старт камеры, заход в убут, возвращаем обычный старт камеры',variable=self.stage2, onvalue=1, offvalue=0)#, command=print_selection)
+        self.check2.grid(row = 3, column = 1, padx = 10, pady = 1, sticky = tk.W)
+
+        self.stage31 = tk.BooleanVar()
+        self.stage31.set(1)
+        self.check3 = tk.Checkbutton(stage_frame, text='stage 3.1 дожидаемся старта камеры, удаляем файл веба',variable=self.stage31, onvalue=1, offvalue=0)#, command=print_selection)
+        self.check3.grid(row = 4, column = 1, padx = 10, pady = 1, sticky = tk.W)
+
+        self.stage32 = tk.BooleanVar()
+        self.stage32.set(1)
+        self.check3 = tk.Checkbutton(stage_frame, text='stage 3.2 копируем новый',variable=self.stage32, onvalue=1, offvalue=0)#, command=print_selection)
+        self.check3.grid(row = 5, column = 1, padx = 10, pady = 1, sticky = tk.W)
+
+        self.stage4 = tk.BooleanVar()
+        self.stage4.set(1)
+        self.check4 = tk.Checkbutton(stage_frame, text='stage 4 старт камеры, заход изменение убут для старта консоли линукс',variable=self.stage4, onvalue=1, offvalue=0)#, command=print_selection)
+        self.check4.grid(row = 6, column = 1, padx = 10, pady = 1, sticky = tk.W)
+
+        self.stage5 = tk.BooleanVar()
+        self.stage5.set(1)
+        self.check5 = tk.Checkbutton(stage_frame, text='stage 5 заход в линукс, удаление ftp из загрузки',variable=self.stage5, onvalue=1, offvalue=0)#, command=print_selection)
+        self.check5.grid(row = 7, column = 1, padx = 10, pady = 1, sticky = tk.W)
+
+        self.stage6 = tk.BooleanVar()
+        self.stage6.set(1)
+        self.check6 = tk.Checkbutton(stage_frame, text='stage 6 старт камеры, заход в убут, возвращаем обычный старт камеры',variable=self.stage6, onvalue=1, offvalue=0)#, command=print_selection)
+        self.check6.grid(row = 8, column = 1, padx = 10, pady = 1, sticky = tk.W)
 
         frameRecv = tk.Frame(window)
-        frameRecv.grid(row = 2, column = 1)
+        frameRecv.grid(row = 5, column = 1)
         labelOutText = tk.Label(frameRecv,text="Received Data:")
         labelOutText.grid(row = 1, column = 1, padx = 3, pady = 2, sticky = tk.W)
         frameRecvSon = tk.Frame(frameRecv)
@@ -133,7 +190,7 @@ class mainGUI:
         #self.add_timestamp()
 
         frameTrans = tk.Frame(window)
-        frameTrans.grid(row = 3, column = 1)
+        frameTrans.grid(row = 6, column = 1)
         labelInText = tk.Label(frameTrans,text="To Transmit Data:")
         labelInText.grid(row = 1, column = 1, padx = 3, pady = 2, sticky = tk.W)
         frameTransSon = tk.Frame(frameTrans)
@@ -144,9 +201,7 @@ class mainGUI:
         self.InputText.pack()
         self.buttonSend = tk.Button(frameTrans, text = "Send", command = self.processButtonSend)
         self.buttonSend.grid(row = 3, column = 1, padx = 5, pady = 3, sticky = tk.E)
-        settings = tk.Frame(window)
-        settings.grid(row = 3, column = 1)
-        e1 = tk.Entry(settings)
+#        e1 = tk.Entry(settings)
         window.mainloop()
 
  
@@ -213,17 +268,20 @@ class mainGUI:
         #self.OutputText.see(tk.END)
         #self.OutputText.see(Tkinter.END)
 
+
     def warningOut(self,data):
-        self.OutputText.insert(tk.END,"=============================")
-        #self.OutputText.insert(tk.END,"========"+data+"===========")
+        self.OutputText.insert(tk.END,"=============================\n")
+        #self.OutputText.insert(tk.END,"========"+data+"===========\n")
         self.OutputText.see(tk.END)
 
 
     def ReadUART(self):
         print("Threading...")
         stage=0
+
         while True:
             if (self.ser.isOpen()):
+                print(self.stage0.get())
                 try:
                     #stage 0 старт камеры, заход изменение убут для старта консоли линукс
                     #stage 1 заход в линукс, добавление ftp
@@ -232,102 +290,103 @@ class mainGUI:
                     #stage 4 старт камеры, заход изменение убут для старта консоли линукс
                     #stage 5 заход в линукс, удаление ftp из загрузки
                     #stage 6 старт камеры, заход в убут, возвращаем обычный старт камеры 
+
                     ch = self.ser.readline().decode('ascii', 'ignore')
                     self.OutputText.insert(tk.END,ch)
                     self.OutputText.see(tk.END)
-                    if( (ch.count("Err:   serial")==1) & ((stage == 0) | (stage == 2) | (stage == 4) | (stage == 6) )) :
-                        self.OutputText.insert(tk.END,"==============")
-                        self.OutputText.see(tk.END)
-                        for i in range(5):
-                            self.sendData(chr(17))
-                        self.sendData("\n")
 
-                        if ( (stage == 0) | (stage == 4) ):
-                            time.sleep(1)
-                            self.sendData("# start installing ftp\n")
-                            self.sendData("setenv bootargs mem=108M console=ttyAMA0,115200 root=/dev/mtdblock1 rootfstype=jffs2 mtdparts=hi_sfc:3M(boot),13M(rootfs) coherent_pool=2M init=/bin/sh\n")
+                    if( (ch.count("Err:   serial")==1) & ( (stage == 0) | (stage == 2) | (stage == 4) | (stage == 6) )) :
+                        if( self.stage0.get() | self.stage2.get() | self.stage4.get() | self.stage6.get() ):
+                            self.OutputText.insert(tk.END,"==============")
+                            self.OutputText.see(tk.END)
+                            for i in range(5):
+                                self.sendData(chr(17))
+                            self.sendData("\n")
 
-                        if ( (stage == 2) | (stage == 6) ):
-                            time.sleep(1)
-                            self.sendData("setenv bootargs mem=108M console=ttyAMA0,115200 root=/dev/mtdblock1 rootfstype=jffs2 mtdparts=hi_sfc:3M(boot),13M(rootfs) coherent_pool=2M\n")
+                            if ( (stage == 0) | (stage == 4) ):
+                                time.sleep(1)
+                                self.sendData("setenv bootargs mem=108M console=ttyAMA0,115200 root=/dev/mtdblock1 rootfstype=jffs2 mtdparts=hi_sfc:3M(boot),13M(rootfs) coherent_pool=2M init=/bin/sh\n")
+
+                            if ( (stage == 2) | (stage == 6) ):
+                                time.sleep(1)
+                                self.sendData("setenv bootargs mem=108M console=ttyAMA0,115200 root=/dev/mtdblock1 rootfstype=jffs2 mtdparts=hi_sfc:3M(boot),13M(rootfs) coherent_pool=2M\n")
                         
-                        self.sendData("saveenv\n")
-                        self.sendData("reset\n")
+                            self.sendData("saveenv\n")
+                            self.sendData("reset\n")
                         stage +=1
+
                     if( (ch.count("job control turned off")==1) & ((stage == 1) | (stage==5)) ):
-                        self.OutputText.insert(tk.END,"==============")
-                        self.OutputText.see(tk.END)
-                        self.sendData(" \n")
-                        #включение ftp
-                        if (stage == 1):
-                            #self.sendData("echo  'telnetd &'  >> /etc/init.d/rcS\n")
-                            self.sendData("echo  'tcpsvd 0.0.0.0 21 ftpd -w -v &'  >> /etc/init.d/rcS\n")
-                            #добавление пользователя с правами root для доступа по телнет
-                            #self.sendData("adduser -G root -S depadmin\n")
-                            #self.sendData("echo -e '$d\nw\nq'| ed /etc/passwd\n")
-                            #self.sendData("echo  'depadmin:x:0:0:Linux User,,,:/home/depadmin:/bin/sh'  >> /etc/passwd\n")
-                            #self.sendData("echo -e 'depadmin\ndepadmin' | passwd depadmin\n")
-                            self.sendData("reboot\n")
-                        if (stage == 5):
-                            #выключение ftp
-                            self.sendData("echo -e '$d\nw\nq'| ed /etc/init.d/rcS\n") 
-                        self.sendData("reboot -f\n")
+                        if( self.stage1.get() | self.stage5.get() ):
+                            self.OutputText.insert(tk.END,"==============")
+                            self.OutputText.see(tk.END)
+                            self.sendData(" \n")
+                            #включение ftp
+                            if (stage == 1):
+                                #self.sendData("echo  'telnetd &'  >> /etc/init.d/rcS\n")
+                                self.sendData("echo  'tcpsvd 0.0.0.0 21 ftpd -w -v &'  >> /etc/init.d/rcS\n")
+                                #добавление пользователя с правами root для доступа по телнет
+                                #self.sendData("adduser -G root -S depadmin\n")
+                                #self.sendData("echo -e '$d\nw\nq'| ed /etc/passwd\n")
+                                #self.sendData("echo  'depadmin:x:0:0:Linux User,,,:/home/depadmin:/bin/sh'  >> /etc/passwd\n")
+                                #self.sendData("echo -e 'depadmin\ndepadmin' | passwd depadmin\n")
+                                self.sendData("reboot\n")
+                            if (stage == 5):
+                                #выключение ftp
+                                self.sendData("echo -e '$d\nw\nq'| ed /etc/init.d/rcS\n") 
+                            self.sendData("reboot -f\n")
                         stage +=1
-                    if((ch.count("111111111")==1) & (stage==3)):
-                        self.OutputText.insert(tk.END,"==============")
-                        self.OutputText.see(tk.END)
-                        file_path = Path('en.tar')
-                        self.OutputText.insert(tk.END,"try to send ftp\n")
-                        self.OutputText.see(tk.END)
 
-                        ftpObject = FTP();                                      # Create an FTp instance
-                        ftpResponse = ftpObject.connect(host="192.168.0.51");   # Connect to the host
-                        print(ftpResponse);
-                        ftpResponse = ftpObject.login();                        # Login anonymously
-                        print(ftpResponse);
-                        ftpResponse = ftpObject.cwd("/web");                        # Change to a specific folder
-                        print(ftpResponse);
-                        ftpResponse = ftpObject.delete("en.tar");               # Delete a file
-                        print(ftpResponse);
+                    if((ch.count("111111111")==1) & ((stage==3) ):
+                        if( self.stage31.get() ):
+                            self.OutputText.insert(tk.END,"==============")
+                            self.OutputText.see(tk.END)
+                            file_path = Path('en.tar')
+                            self.OutputText.insert(tk.END,"try to send ftp\n")
+                            self.OutputText.see(tk.END)
 
-                       
+                            ftpObject = FTP();                                      # Create an FTp instance
+                            ftpResponse = ftpObject.connect(host="192.168.0.51");   # Connect to the host
+                            print(ftpResponse);
+                            ftpResponse = ftpObject.login();                        # Login anonymously
+                            print(ftpResponse);
+                            ftpResponse = ftpObject.cwd("/web");                        # Change to a specific folder
+                            print(ftpResponse);
+                            ftpResponse = ftpObject.delete("en.tar");               # Delete a file
+                            print(ftpResponse);
+
+                        if( self.stage32.get() ):
+                            sizeWritten = 0
+                            file_path='/media/data/dev/python/uartWriter/en.tar'
+                            #print('Total file size : ' + str(round(os.path.getsize(file_path) / 1024 / 1024 ,1)) + ' Mb')
+
+                            # Open FTP connection
+#                           ftp = FTP('192.168.0.51')
+
+#                            uploadTracker = FtpUploadTracker(int(os.path.getsize(file_path)))
+                            file = open(file_path, 'rb')
+                            ftp.storbinary('STOR /web/en.tar', file, 1024, uploadTracker.handle)
+                            print ("transfer ended")
+                            localfile='/media/data/dev/python/uartWriter/en.tar'
 
 
-                        # Init
-                        sizeWritten = 0
-                        file_path='/media/data/dev/python/uartWriter/en.tar'
-                        print('Total file size : ' + str(round(os.path.getsize(file_path) / 1024 / 1024 ,1)) + ' Mb')
+                            remotefile='/web/en.tar'
+                            #with open(localfile, "rb") as file:
+                            #    ftp.storbinary('STOR %s' % remotefile, file)
 
-                        # Open FTP connection
-#                        ftp = FTP('192.168.0.51')
+                            with FTP("192.168.0.51", "root", "") as ftp, open(localfile, 'rb') as file:
+                                    ftp.storbinary(f'STOR {remotefile}', file)
 
-
-                        uploadTracker = FtpUploadTracker(int(os.path.getsize(file_path)))
-                        file = open(file_path, 'rb')
-                        ftp.storbinary('STOR /web/en.tar', file, 1024, uploadTracker.handle)
-                        print ("transfer ended")
-                        localfile='/media/data/dev/python/uartWriter/en.tar'
-                       
-
-                        remotefile='/web/en.tar'
-                        #with open(localfile, "rb") as file:
-                        #    ftp.storbinary('STOR %s' % remotefile, file)
-
-                        with FTP("192.168.0.51", "root", "") as ftp, open(localfile, 'rb') as file:
-                                ftp.storbinary(f'STOR {remotefile}', file)
-
-                        #with FTP('192.168.0.51', 'root', '') as ftp, open(file_path, 'rb') as file:
-                        #    ftp.storbinary(f'STOR {file_path.name}', file)
+                            #with FTP('192.168.0.51', 'root', '') as ftp, open(file_path, 'rb') as file:
+                            #    ftp.storbinary(f'STOR {file_path.name}', file)
+                            self.OutputText.insert(tk.END,"=============================\n")
+                            self.OutputText.insert(tk.END,"=============================\n")
+                            self.OutputText.insert(tk.END,"=============================\n")
+                            self.OutputText.insert(tk.END,"========NEED RESET===========\n")
+                            self.OutputText.insert(tk.END,"========NEED RESET===========\n")
+                            self.OutputText.insert(tk.END,"========NEED RESET===========\n")
+                            self.OutputText.insert(tk.END,"========NEED RESET===========\n")
+                            self.OutputText.see(tk.END)
                         stage +=1
-                        self.OutputText.insert(tk.END,"=============================\n")
-                        self.OutputText.insert(tk.END,"=============================\n")
-                        self.OutputText.insert(tk.END,"=============================\n")
-                        self.OutputText.insert(tk.END,"========NEED RESET===========\n")
-                        self.OutputText.insert(tk.END,"========NEED RESET===========\n")
-                        self.OutputText.insert(tk.END,"========NEED RESET===========\n")
-                        self.OutputText.insert(tk.END,"========NEED RESET===========\n")
-                        self.OutputText.see(tk.END)
-
 
                 except:
                     infromStr = "Something wrong in receiving."
