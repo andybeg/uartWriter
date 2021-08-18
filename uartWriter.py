@@ -120,11 +120,6 @@ class mainGUI:
         self.buttonSS = tk.Button(frame_COMinf, text = "Start", command = self.processButtonSS)
         self.buttonSS.grid(row = 3, column = 4, padx = 5, pady = 3, sticky = tk.E)
 
-        # serial object
-        self.ser = serial.Serial()
-        # serial read threading
-        self.ReadUARTThread = threading.Thread(target=self.ReadUART)
-        self.ReadUARTThread.start()
 #stage 0 старт камеры, заход изменение убут для старта консоли линукс
 #stage 1 заход в линукс, добавление ftp
 #stage 2 старт камеры, заход в убут, возвращаем обычный старт камеры
@@ -180,12 +175,13 @@ class mainGUI:
 
         IPSettings = tk.Frame(window)
         IPSettings.grid(row = 5, column = 1)
-        IPLabel =tk.Label(IPSettings,text="IP:")
-        IPLabel.grid(row = 1, column = 1, padx = 3, pady = 2, sticky = tk.W)
+        #IPLabel =tk.Label(IPSettings,text="IP:")
+        #IPLabel.grid(row = 1, column = 1, padx = 3, pady = 2, sticky = tk.W)
         self.camHost = tk.StringVar()
         self.ent = tk.Entry(IPSettings,textvariable = self.camHost,width=18,fg="blue",bd=3,selectbackground='violet')
         self.ent.insert(0,"192.168.0.51")
-        self.ent.grid(row = 1, column = 2)
+        self.ent.grid(row = 1, column = 1)
+        print(self.camHost.get())
 
         frameRecv = tk.Frame(window)
         frameRecv.grid(row = 6, column = 1)
@@ -203,6 +199,11 @@ class mainGUI:
         self.OutputText.configure(yscrollcommand=scrollbarRecv.set)
         scrollbarRecv.pack(side = tk.RIGHT, fill = tk.Y)
         self.OutputText.pack(side="left", fill="y", expand=True)
+        # serial object
+        self.ser = serial.Serial()
+        # serial read threading
+        self.ReadUARTThread = threading.Thread(target=self.ReadUART)
+        self.ReadUARTThread.start()
 
         frameTrans = tk.Frame(window)
         frameTrans.grid(row = 7, column = 1)
@@ -346,13 +347,18 @@ class mainGUI:
     def setColorForAll(self,col):
         for i in range(8):
             self.setColor(i,col)
+
     def getCondition(self):
         self.condition = self.q.get()
 
+    def getIP(self):
+        return self.camHost.get()
+
     def ReadUART(self):
         print("Threading...")
-        print(self.camHost.get())
+        
         while True:
+            #print(self.getIP())
             if (self.ser.isOpen()):
                 try:
 #stage 0 старт камеры, заход изменение убут для старта консоли линукс
@@ -411,8 +417,7 @@ class mainGUI:
                     if((ch.count("111111111")==1) & ( (self.condition==3) | (self.condition==4) ) ):
                         self.setColor(self.condition,"green")
                         if( self.condition==3 ):
-                            Host=""
-                            Host=str(self.ent.get())
+                            Host=self.getIP()
                             file_path = Path('en.tar')
                             self.OutputText.insert(tk.END,"try to send ftp\n")
                             self.OutputText.see(tk.END)
