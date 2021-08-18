@@ -1,3 +1,4 @@
+#from _typeshed import Self
 import tkinter as tk
 from tkinter import ttk
 import serial
@@ -10,8 +11,10 @@ from pathlib import Path
 import json
 from array import *
 import queue
+from tkinter import *
+from tkinter import messagebox
 
-#import ftpUploadProgress
+
 
 class FtpUploadTracker:
     sizeWritten = 0
@@ -137,9 +140,9 @@ class mainGUI:
 
         self.stage0 = tk.BooleanVar()
         self.stage0.set(1)
-        self.check0 = tk.Checkbutton(stage_frame, text='stage 0 старт камеры, заход изменение убут для старта консоли линукс"',variable=self.stage0, onvalue=1, offvalue=0)#, command=print_selection)
+        self.check0 = tk.Checkbutton(stage_frame, text='stage 0 старт камеры, заход изменение убут для старта консоли линукс',variable=self.stage0, onvalue=1, offvalue=0)#, command=print_selection)
         self.check0.grid(row = 1, column = 1, padx = 10, pady = 1, sticky = tk.W)
-
+        
         self.stage1 = tk.BooleanVar()
         self.stage1.set(1)
         self.check1 = tk.Checkbutton(stage_frame, text='stage 1 заход в линукс, добавление ftp',variable=self.stage1, onvalue=1, offvalue=0)#, command=print_selection)
@@ -175,24 +178,34 @@ class mainGUI:
         self.check7 = tk.Checkbutton(stage_frame, text='stage 6 старт камеры, заход в убут, возвращаем обычный старт камеры',variable=self.stage7, onvalue=1, offvalue=0)#, command=print_selection)
         self.check7.grid(row = 8, column = 1, padx = 10, pady = 1, sticky = tk.W)
 
+        IPSettings = tk.Frame(window)
+        IPSettings.grid(row = 5, column = 1)
+        IPLabel =tk.Label(IPSettings,text="IP:")
+        IPLabel.grid(row = 1, column = 1, padx = 3, pady = 2, sticky = tk.W)
+        self.camHost = tk.StringVar()
+        self.ent = tk.Entry(IPSettings,textvariable = self.camHost,width=18,fg="blue",bd=3,selectbackground='violet')
+        self.ent.insert(0,"192.168.0.51")
+        self.ent.grid(row = 1, column = 2)
+
         frameRecv = tk.Frame(window)
-        frameRecv.grid(row = 5, column = 1)
+        frameRecv.grid(row = 6, column = 1)
         labelOutText = tk.Label(frameRecv,text="Received Data:")
         labelOutText.grid(row = 1, column = 1, padx = 3, pady = 2, sticky = tk.W)
         frameRecvSon = tk.Frame(frameRecv)
         frameRecvSon.grid(row = 2, column =1)
         scrollbarRecv = tk.Scrollbar(frameRecvSon)
         self.OutputText = tk.Text(frameRecvSon, wrap = tk.WORD, width = 60, height = 20, yscrollcommand = scrollbarRecv.set)
-        #self.OutputText.pack(fill="both", expand=True)
-        
+        self.showConsole = tk.BooleanVar()
+        self.showConsole.set(0)
+        self.check8 = tk.Checkbutton(frameRecv, text='отображать вывод консоли',variable=self.showConsole, onvalue=1, offvalue=0)
+        self.check8.grid(row = 4, column = 1)
+       
         self.OutputText.configure(yscrollcommand=scrollbarRecv.set)
-        #self.vsb.pack(side="right", fill="y")
         scrollbarRecv.pack(side = tk.RIGHT, fill = tk.Y)
         self.OutputText.pack(side="left", fill="y", expand=True)
-        #self.add_timestamp()
 
         frameTrans = tk.Frame(window)
-        frameTrans.grid(row = 6, column = 1)
+        frameTrans.grid(row = 7, column = 1)
         labelInText = tk.Label(frameTrans,text="To Transmit Data:")
         labelInText.grid(row = 1, column = 1, padx = 3, pady = 2, sticky = tk.W)
         frameTransSon = tk.Frame(frameTrans)
@@ -203,7 +216,6 @@ class mainGUI:
         self.InputText.pack()
         self.buttonSend = tk.Button(frameTrans, text = "Send", command = self.processButtonSend)
         self.buttonSend.grid(row = 3, column = 1, padx = 5, pady = 3, sticky = tk.E)
-#        e1 = tk.Entry(settings)
         window.mainloop()
 
  
@@ -214,7 +226,7 @@ class mainGUI:
             self.uartState = False
         else:
             # restart serial port
-            self.getCondition()
+            self.setCondition()
             self.ser.port = self.COM.get()
             self.ser.baudrate = 115200
             print(self.ser.port)
@@ -273,11 +285,10 @@ class mainGUI:
 
 
     def warningOut(self,data):
-        self.OutputText.insert(tk.END,"=============================\n")
-        #self.OutputText.insert(tk.END,"========"+data+"===========\n")
+        self.OutputText.insert(tk.END,data+"\n")
         self.OutputText.see(tk.END)
 
-    def getCondition(self):
+    def setCondition(self):
         while not self.q.empty():
             self.q.get()
         if(self.stage0.get()):
@@ -307,12 +318,42 @@ class mainGUI:
         self.condition = self.q.get()
         print(self.condition)
 
+    def setColor(self,var,col):
+        if (var==0):
+            self.check0["fg"] = col
+        else:
+            if (var==1):
+                self.check1["fg"] = col
+            else:
+                if (var==2):
+                    self.check2["fg"] = col
+                else: 
+                    if (var==3):
+                        self.check3["fg"] = col
+                    else:
+                        if (var==4):
+                            self.check4["fg"] = col
+                        else:
+                            if (var==5):
+                                self.check5["fg"] = col
+                            else:
+                                if (var==6):
+                                    self.check6["fg"] = col
+                                else:
+                                    if (var==7):
+                                        self.check7["fg"] = col
+
+    def setColorForAll(self,col):
+        for i in range(8):
+            self.setColor(i,col)
+    def getCondition(self):
+        self.condition = self.q.get()
 
     def ReadUART(self):
         print("Threading...")
+        print(self.camHost.get())
         while True:
             if (self.ser.isOpen()):
-#                print(self.stage[0].get())
                 try:
 #stage 0 старт камеры, заход изменение убут для старта консоли линукс
 #stage 1 заход в линукс, добавление ftp
@@ -324,14 +365,13 @@ class mainGUI:
 #stage 7 старт камеры, заход в убут, возвращаем обычный старт камеры 
 
                     ch = self.ser.readline().decode('ascii', 'ignore')
-                    self.OutputText.insert(tk.END,ch)
-                    self.OutputText.see(tk.END)
+                    if(self.showConsole.get()):
+                        self.OutputText.insert(tk.END,ch)
+                        self.OutputText.see(tk.END)
 
-
+                    self.setColor(self.condition,"green")
                     if( (ch.count("Err:   serial")==1) & ( (self.condition == 0) | (self.condition == 2) | (self.condition == 5) | (self.condition == 7) )) :
                         if( self.stage0.get() | self.stage2.get() | self.stage4.get() | self.stage6.get() ):
-                            self.OutputText.insert(tk.END,"==============")
-                            self.OutputText.see(tk.END)
                             for i in range(5):
                                 self.sendData(chr(17))
                             self.sendData("\n")
@@ -343,41 +383,42 @@ class mainGUI:
                             if ( (self.condition == 2) | (self.condition == 7) ):
                                 time.sleep(1)
                                 self.sendData("setenv bootargs mem=108M console=ttyAMA0,115200 root=/dev/mtdblock1 rootfstype=jffs2 mtdparts=hi_sfc:3M(boot),13M(rootfs) coherent_pool=2M\n")
-                        
+
                             self.sendData("saveenv\n")
                             self.sendData("reset\n")
                         self.condition = self.q.get()
+#                        if(self.condition == 7):
+
 
                     if( (ch.count("job control turned off")==1) & ((self.condition == 1) | (self.condition==6)) ):
-#                        if( self.stage1.get() | self.stage5.get() ):
-                            self.OutputText.insert(tk.END,"==============")
-                            self.OutputText.see(tk.END)
-                            self.sendData(" \n")
-                            #включение ftp
-                            if (self.condition == 1):
-                                #self.sendData("echo  'telnetd &'  >> /etc/init.d/rcS\n")
-                                self.sendData("echo  'tcpsvd 0.0.0.0 21 ftpd -w -v &'  >> /etc/init.d/rcS\n")
-                                #добавление пользователя с правами root для доступа по телнет
-                                #self.sendData("adduser -G root -S depadmin\n")
-                                #self.sendData("echo -e '$d\nw\nq'| ed /etc/passwd\n")
-                                #self.sendData("echo  'depadmin:x:0:0:Linux User,,,:/home/depadmin:/bin/sh'  >> /etc/passwd\n")
-                                #self.sendData("echo -e 'depadmin\ndepadmin' | passwd depadmin\n")
-                                self.sendData("reboot\n")
-                            if (self.condition == 6):
-                                #выключение ftp
-                                self.sendData("echo -e '$d\nw\nq'| ed /etc/init.d/rcS\n") 
-                            self.sendData("reboot -f\n")
+                        self.sendData(" \n")
+                        #включение ftp
+                        if (self.condition == 1):
+                            #self.sendData("echo  'telnetd &'  >> /etc/init.d/rcS\n")
+                            self.sendData("echo  'tcpsvd 0.0.0.0 21 ftpd -w -v &'  >> /etc/init.d/rcS\n")
+                            #добавление пользователя с правами root для доступа по телнет
+                            #self.sendData("adduser -G root -S depadmin\n")
+                            #self.sendData("echo -e '$d\nw\nq'| ed /etc/passwd\n")
+                            #self.sendData("echo  'depadmin:x:0:0:Linux User,,,:/home/depadmin:/bin/sh'  >> /etc/passwd\n")
+                            #self.sendData("echo -e 'depadmin\ndepadmin' | passwd depadmin\n")
+                            self.sendData("reboot\n")
+                        if (self.condition == 6):
+                            #выключение ftp
+                            self.sendData("echo -e '$d\nw\nq'| ed /etc/init.d/rcS\n") 
+                        self.sendData("reboot -f\n")
+                        self.condition = self.q.get()
 
-                    if((ch.count("111111111")==1) & (self.condition==3) ):
-#                        if( self.stage31.get() ):
-                            self.OutputText.insert(tk.END,"==============")
-                            self.OutputText.see(tk.END)
+                    if((ch.count("111111111")==1) & ( (self.condition==3) | (self.condition==4) ) ):
+                        self.setColor(self.condition,"green")
+                        if( self.condition==3 ):
+                            Host=""
+                            Host=str(self.ent.get())
                             file_path = Path('en.tar')
                             self.OutputText.insert(tk.END,"try to send ftp\n")
                             self.OutputText.see(tk.END)
 
                             ftpObject = FTP();                                      # Create an FTp instance
-                            ftpResponse = ftpObject.connect(host="192.168.0.51");   # Connect to the host
+                            ftpResponse = ftpObject.connect(host=Host);   # Connect to the host
                             print(ftpResponse);
                             ftpResponse = ftpObject.login();                        # Login anonymously
                             print(ftpResponse);
@@ -385,39 +426,26 @@ class mainGUI:
                             print(ftpResponse);
                             ftpResponse = ftpObject.delete("en.tar");               # Delete a file
                             print(ftpResponse);
+                            self.condition = self.q.get()
+                        self.setColor(self.condition,"green")
 
-#                        if( self.stage32.get() ):
+                        if( self.condition==4 ):
                             sizeWritten = 0
-                            file_path='/media/data/dev/python/uartWriter/en.tar'
-                            #print('Total file size : ' + str(round(os.path.getsize(file_path) / 1024 / 1024 ,1)) + ' Mb')
-
-                            # Open FTP connection
-#                           ftp = FTP('192.168.0.51')
-
-#                            uploadTracker = FtpUploadTracker(int(os.path.getsize(file_path)))
+                            file_path='./en.tar'
                             file = open(file_path, 'rb')
-                            ftp.storbinary('STOR /web/en.tar', file, 1024, uploadTracker.handle)
                             print ("transfer ended")
-                            localfile='/media/data/dev/python/uartWriter/en.tar'
-
-
+                            localfile='./en.tar'
                             remotefile='/web/en.tar'
-                            #with open(localfile, "rb") as file:
-                            #    ftp.storbinary('STOR %s' % remotefile, file)
-
-                            with FTP("192.168.0.51", "root", "") as ftp, open(localfile, 'rb') as file:
+                            with FTP(Host, "root", "") as ftp, open(localfile, 'rb') as file:
                                     ftp.storbinary(f'STOR {remotefile}', file)
 
-                            #with FTP('192.168.0.51', 'root', '') as ftp, open(file_path, 'rb') as file:
-                            #    ftp.storbinary(f'STOR {file_path.name}', file)
-                            self.OutputText.insert(tk.END,"=============================\n")
-                            self.OutputText.insert(tk.END,"=============================\n")
-                            self.OutputText.insert(tk.END,"=============================\n")
-                            self.OutputText.insert(tk.END,"========NEED RESET===========\n")
-                            self.OutputText.insert(tk.END,"========NEED RESET===========\n")
-                            self.OutputText.insert(tk.END,"========NEED RESET===========\n")
-                            self.OutputText.insert(tk.END,"========NEED RESET===========\n")
-                            self.OutputText.see(tk.END)
+                            self.condition = self.q.get()
+                        self.warningOut("необходимо перегрузить камеру по питанию\n")
+                        #self.OutputText.insert(tk.END,warn)
+                        #self.OutputText.see(tk.END)
+                    if(self.q.empty()):
+                        self.warningOut("процедура прошивки окончена")
+                        self.setColorForAll("black")
 
                 except:
                     infromStr = "Something wrong in receiving."
