@@ -1,4 +1,3 @@
-#from _typeshed import Self
 import tkinter as tk
 from tkinter import ttk
 import serial
@@ -175,8 +174,8 @@ class mainGUI:
 
         IPSettings = tk.Frame(window)
         IPSettings.grid(row = 5, column = 1)
-        #IPLabel =tk.Label(IPSettings,text="IP:")
-        #IPLabel.grid(row = 1, column = 1, padx = 3, pady = 2, sticky = tk.W)
+        IPLabel =tk.Label(IPSettings,text="IP:")
+        IPLabel.grid(row = 1, column = 1, padx = 3, pady = 2, sticky = tk.W)
         self.camHost = tk.StringVar()
         self.ent = tk.Entry(IPSettings,textvariable = self.camHost,width=18,fg="blue",bd=3,selectbackground='violet')
         self.ent.insert(0,"192.168.0.51")
@@ -228,6 +227,7 @@ class mainGUI:
         else:
             # restart serial port
             self.setCondition()
+            self.setColorForAll("black")
             self.ser.port = self.COM.get()
             self.ser.baudrate = 115200
             print(self.ser.port)
@@ -319,6 +319,42 @@ class mainGUI:
         self.condition = self.q.get()
         print(self.condition)
 
+    def ftpStage(self):
+        if( self.condition==3 ):
+            self.setColor(self.condition,"green")
+            Host=self.getIP()
+            file_path = Path('en.tar')
+            self.OutputText.insert(tk.END,"try to send ftp\n")
+            self.OutputText.see(tk.END)
+
+            ftpObject = FTP();                                      # Create an FTp instance
+            ftpResponse = ftpObject.connect(host=Host);   # Connect to the host
+            ftpResponse = ftpObject.login();                        # Login anonymously
+            ftpResponse = ftpObject.cwd("/web");                        # Change to a specific folder
+            ftpResponse = ftpObject.delete("en.tar");               # Delete a file
+            print(ftpResponse);
+            self.getCondition()
+            
+
+        if( self.condition==4 ):
+            self.setColor(self.condition,"green")
+            sizeWritten = 0
+            file_path='./en.tar'
+            file = open(file_path, 'rb')
+            print ("transfer ended")
+            localfile='./en.tar'
+            remotefile='/web/en.tar'
+            with FTP(Host, "root", "") as ftp, open(localfile, 'rb') as file:
+                ftp.storbinary(f'STOR {remotefile}', file)
+
+            self.getCondition()
+            self.warningOut("необходимо перегрузить камеру по питанию\n")
+                        #self.OutputText.insert(tk.END,warn)
+                        #self.OutputText.see(tk.END)
+            self.getCondition()
+            
+
+
     def setColor(self,var,col):
         if (var==0):
             self.check0["fg"] = col
@@ -345,11 +381,13 @@ class mainGUI:
                                         self.check7["fg"] = col
 
     def setColorForAll(self,col):
-        for i in range(8):
+        for i in range(9):
             self.setColor(i,col)
 
     def getCondition(self):
-        self.condition = self.q.get()
+        if (self.q.empty() != True):
+            self.condition = self.q.get()
+            print("condition = " + str(self.condition) + "\n")
 
     def getIP(self):
         return self.camHost.get()
@@ -377,7 +415,7 @@ class mainGUI:
 
                     self.setColor(self.condition,"green")
                     if( (ch.count("Err:   serial")==1) & ( (self.condition == 0) | (self.condition == 2) | (self.condition == 5) | (self.condition == 7) )) :
-                        if( self.stage0.get() | self.stage2.get() | self.stage4.get() | self.stage6.get() ):
+#                        if( self.stage0.get() | self.stage2.get() | self.stage4.get() | self.stage6.get() ):
                             for i in range(5):
                                 self.sendData(chr(17))
                             self.sendData("\n")
@@ -392,9 +430,13 @@ class mainGUI:
 
                             self.sendData("saveenv\n")
                             self.sendData("reset\n")
-                        self.condition = self.q.get()
-#                        if(self.condition == 7):
+                            if(self.condition == 7):
+                                time.sleep(3)
+                                self.warningOut("процедура прошивки окончена")
+                                self.setColorForAll("black")
+                                self.processButtonSS()
 
+                            self.getCondition()
 
                     if( (ch.count("job control turned off")==1) & ((self.condition == 1) | (self.condition==6)) ):
                         self.sendData(" \n")
@@ -407,15 +449,21 @@ class mainGUI:
                             #self.sendData("echo -e '$d\nw\nq'| ed /etc/passwd\n")
                             #self.sendData("echo  'depadmin:x:0:0:Linux User,,,:/home/depadmin:/bin/sh'  >> /etc/passwd\n")
                             #self.sendData("echo -e 'depadmin\ndepadmin' | passwd depadmin\n")
-                            self.sendData("reboot\n")
+                            self.getCondition()
                         if (self.condition == 6):
                             #выключение ftp
-                            self.sendData("echo -e '$d\nw\nq'| ed /etc/init.d/rcS\n") 
+                            self.sendData("echo -e '$d\nw\nq'| ed /etc/init.d/rcS\n")
+                            self.getCondition() 
                         self.sendData("reboot -f\n")
-                        self.condition = self.q.get()
+                        
 
                     if((ch.count("111111111")==1) & ( (self.condition==3) | (self.condition==4) ) ):
-                        self.setColor(self.condition,"green")
+#                        self.setColor(self.condition,"green")
+                        self.warningOut("ftp thread started\n")
+                        #self.ftpThread = threading.Thread(target=self.ftpStage())
+                        #self.ftpThread.start()
+                        #self.warningOut("ftp thread started\n")
+
                         if( self.condition==3 ):
                             Host=self.getIP()
                             file_path = Path('en.tar')
@@ -431,8 +479,8 @@ class mainGUI:
                             print(ftpResponse);
                             ftpResponse = ftpObject.delete("en.tar");               # Delete a file
                             print(ftpResponse);
-                            self.condition = self.q.get()
-                        self.setColor(self.condition,"green")
+                            self.getCondition()
+                            self.setColor(self.condition,"green")
 
                         if( self.condition==4 ):
                             sizeWritten = 0
@@ -444,17 +492,13 @@ class mainGUI:
                             with FTP(Host, "root", "") as ftp, open(localfile, 'rb') as file:
                                     ftp.storbinary(f'STOR {remotefile}', file)
 
-                            self.condition = self.q.get()
+                            self.getCondition()
                         self.warningOut("необходимо перегрузить камеру по питанию\n")
-                        #self.OutputText.insert(tk.END,warn)
-                        #self.OutputText.see(tk.END)
-                    if(self.q.empty()):
-                        self.warningOut("процедура прошивки окончена")
-                        self.setColorForAll("black")
+                        self.ser.flushInput()
 
                 except:
                     infromStr = "Something wrong in receiving."
-                    InformWindow(infromStr)
+                    #InformWindow(infromStr)
                     self.ser.close() # close the serial when catch exception
                     self.buttonSS["text"] = "Start"
                     self.uartState = False
