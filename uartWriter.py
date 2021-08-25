@@ -70,12 +70,12 @@ class mainGUI:
             tmp_list.append(port)
         find_com = serial.tools.list_ports
 
-        comboCOM = ttk.Combobox(frame_COMinf, values=serial_ports())
-        comboCOM["state"] = "readonly"
-        comboCOM.current(2)
-        self.COM = tk.StringVar(value = comboCOM.get())
+        self.comboCOM = ttk.Combobox(frame_COMinf, values=serial_ports())
+        self.comboCOM["state"] = "readonly"
+        self.comboCOM.current(0)
+        self.COM = tk.StringVar(value = self.comboCOM.get())
             
-        comboCOM.grid(row = 1, column = 2, padx = 5, pady = 3)
+        self.comboCOM.grid(row = 1, column = 2, padx = 5, pady = 3)
 
         labelBaudrate = tk.Label(frame_COMinf,text="Baudrate: ")
         comboBaudrate = ttk.Combobox(frame_COMinf, values=[
@@ -228,7 +228,7 @@ class mainGUI:
             # restart serial port
             self.setCondition()
             self.setColorForAll("black")
-            self.ser.port = self.COM.get()
+            self.ser.port = self.comboCOM.get()
             self.ser.baudrate = 115200
             print(self.ser.port)
             print(self.ser.baudrate)
@@ -316,44 +316,8 @@ class mainGUI:
         if(self.stage7.get()):
             print("будет выполняться старт камеры, заход в убут, возвращаем обычный старт камеры")
             self.q.put(7)
-        self.condition = self.q.get()
+        self.getCondition()
         print(self.condition)
-
-    def ftpStage(self):
-        if( self.condition==3 ):
-            self.setColor(self.condition,"green")
-            Host=self.getIP()
-            file_path = Path('en.tar')
-            self.OutputText.insert(tk.END,"try to send ftp\n")
-            self.OutputText.see(tk.END)
-
-            ftpObject = FTP();                                      # Create an FTp instance
-            ftpResponse = ftpObject.connect(host=Host);   # Connect to the host
-            ftpResponse = ftpObject.login();                        # Login anonymously
-            ftpResponse = ftpObject.cwd("/web");                        # Change to a specific folder
-            ftpResponse = ftpObject.delete("en.tar");               # Delete a file
-            print(ftpResponse);
-            self.getCondition()
-            
-
-        if( self.condition==4 ):
-            self.setColor(self.condition,"green")
-            sizeWritten = 0
-            file_path='./en.tar'
-            file = open(file_path, 'rb')
-            print ("transfer ended")
-            localfile='./en.tar'
-            remotefile='/web/en.tar'
-            with FTP(Host, "root", "") as ftp, open(localfile, 'rb') as file:
-                ftp.storbinary(f'STOR {remotefile}', file)
-
-            self.getCondition()
-            self.warningOut("необходимо перегрузить камеру по питанию\n")
-                        #self.OutputText.insert(tk.END,warn)
-                        #self.OutputText.see(tk.END)
-            self.getCondition()
-            
-
 
     def setColor(self,var,col):
         if (var==0):
@@ -397,8 +361,10 @@ class mainGUI:
         
         while True:
             #print(self.getIP())
+            
             if (self.ser.isOpen()):
                 try:
+                    #print(tk.StringVar(self.comboCOM.get()))
 #stage 0 старт камеры, заход изменение убут для старта консоли линукс
 #stage 1 заход в линукс, добавление ftp
 #stage 2 старт камеры, заход в убут, возвращаем обычный старт камеры
@@ -415,28 +381,23 @@ class mainGUI:
 
                     self.setColor(self.condition,"green")
                     if( (ch.count("Err:   serial")==1) & ( (self.condition == 0) | (self.condition == 2) | (self.condition == 5) | (self.condition == 7) )) :
-#                        if( self.stage0.get() | self.stage2.get() | self.stage4.get() | self.stage6.get() ):
-                            for i in range(5):
-                                self.sendData(chr(17))
-                            self.sendData("\n")
-
-                            if ( (self.condition == 0) | (self.condition == 5) ):
-                                time.sleep(1)
-                                self.sendData("setenv bootargs mem=108M console=ttyAMA0,115200 root=/dev/mtdblock1 rootfstype=jffs2 mtdparts=hi_sfc:3M(boot),13M(rootfs) coherent_pool=2M init=/bin/sh\n")
-
-                            if ( (self.condition == 2) | (self.condition == 7) ):
-                                time.sleep(1)
-                                self.sendData("setenv bootargs mem=108M console=ttyAMA0,115200 root=/dev/mtdblock1 rootfstype=jffs2 mtdparts=hi_sfc:3M(boot),13M(rootfs) coherent_pool=2M\n")
-
-                            self.sendData("saveenv\n")
-                            self.sendData("reset\n")
-                            if(self.condition == 7):
-                                time.sleep(3)
-                                self.warningOut("процедура прошивки окончена")
-                                self.setColorForAll("black")
-                                self.processButtonSS()
-
-                            self.getCondition()
+                        for i in range(5):
+                            self.sendData(chr(17))
+                        self.sendData("\n")
+                        if ( (self.condition == 0) | (self.condition == 5) ):
+                            time.sleep(1)
+                            self.sendData("setenv bootargs mem=108M console=ttyAMA0,115200 root=/dev/mtdblock1 rootfstype=jffs2 mtdparts=hi_sfc:3M(boot),13M(rootfs) coherent_pool=2M init=/bin/sh\n")
+                        if ( (self.condition == 2) | (self.condition == 7) ):
+                            time.sleep(1)
+                            self.sendData("setenv bootargs mem=108M console=ttyAMA0,115200 root=/dev/mtdblock1 rootfstype=jffs2 mtdparts=hi_sfc:3M(boot),13M(rootfs) coherent_pool=2M\n")
+                        self.sendData("saveenv\n")
+                        self.sendData("reset\n")
+                        if(self.condition == 7):
+                            time.sleep(3)
+                            self.warningOut("процедура прошивки окончена")
+                            self.setColorForAll("black")
+                            self.processButtonSS()
+                        self.getCondition()
 
                     if( (ch.count("job control turned off")==1) & ((self.condition == 1) | (self.condition==6)) ):
                         self.sendData(" \n")
